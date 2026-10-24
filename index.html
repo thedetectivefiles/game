@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Detective Files - Procedural Mystery Investigation System</title>
+  <meta name="description" content="A professional procedural murder mystery detective game where every case creates a completely unique homicide investigation.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body class="dark-theme" data-tab="tab-map">
+
+  <!-- TOP HEADER / HUD BAR -->
+  <header id="main-header" class="header-hud">
+    <div class="hud-brand">
+      <span class="hud-badge">🔍</span>
+      <div>
+        <h1 id="game-title">THE DETECTIVE FILES</h1>
+        <div id="case-subtitle" class="hud-sub">No Active Case</div>
+      </div>
+    </div>
+
+    <div class="hud-stats">
+      <div class="hud-stat-box">
+        <span class="stat-label">LOCATION</span>
+        <span id="hud-location" class="stat-value text-amber">Police Station</span>
+      </div>
+      <div class="hud-stat-box">
+        <span class="stat-label">CLOCK</span>
+        <span id="hud-time" class="stat-value text-gold">Day 1 - 08:00 AM</span>
+      </div>
+      <div class="hud-stat-box">
+        <span class="stat-label">DEADLINE</span>
+        <span id="hud-deadline" class="stat-value text-crimson">5 Days Left</span>
+      </div>
+      <div class="hud-stat-box">
+        <span class="stat-label">INVENTORY</span>
+        <span id="hud-inventory" class="stat-value">0 Items</span>
+      </div>
+    </div>
+
+    <div class="hud-actions">
+      <button id="btn-save" class="btn btn-secondary btn-sm">💾 Save</button>
+      <button id="btn-load" class="btn btn-secondary btn-sm">📂 Load</button>
+      <button id="btn-new-case" class="btn btn-primary btn-sm">✨ New Case</button>
+    </div>
+  </header>
+
+  <!-- NOTIFICATION / TOAST CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- NAVIGATION TAB BAR -->
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="tab-map">🗺️ City Map</button>
+    <button class="nav-tab" data-tab="tab-search">🔎 Search Scene</button>
+    <button class="nav-tab" data-tab="tab-interrogate">🕵️ Interrogate</button>
+    <button class="nav-tab" data-tab="tab-lab">🔬 Forensic Lab <span id="badge-lab-count" class="badge-count hidden">0</span></button>
+    <button class="nav-tab" data-tab="tab-deductions">🧩 Clue Matrix <span id="badge-deduction-count" class="badge-count hidden">0</span></button>
+    <button class="nav-tab" data-tab="tab-notebook">📓 Notebook</button>
+    <button class="nav-tab" data-tab="tab-newspaper">📰 Daily Press</button>
+    <button class="nav-tab btn-accuse-tab" data-tab="tab-accuse">⚖️ Arrest Warrant</button>
+  </nav>
+
+  <!-- MAIN CONTENT VIEWS -->
+  <main id="app-content" class="container">
+
+    <!-- START / STARTUP MAIN MENU MODAL ON BOOT -->
+    <div id="modal-start" class="modal-backdrop">
+      <div class="modal-card modal-lg">
+        <div class="modal-header" style="text-align: center;">
+          <h2 style="font-size: 1.8rem; color: var(--accent-gold);">🕵️ THE DETECTIVE FILES</h2>
+          <p class="text-sub">Procedural Homicide Investigation System</p>
+        </div>
+
+        <!-- SCREEN 1: MAIN MENU SELECTION -->
+        <div id="start-screen-menu" class="modal-body" style="display: block;">
+          <div style="display: flex; flex-direction: column; gap: 0.85rem; margin: 1.5rem 0;">
+            <button id="btn-menu-new-game" onclick="document.getElementById('start-screen-menu').style.display='none'; document.getElementById('start-screen-new').style.display='block'; document.getElementById('start-screen-instructions').style.display='none'; document.getElementById('start-screen-load').style.display='none';" class="btn btn-primary btn-lg btn-block">✨ Start New Case</button>
+            <button id="btn-menu-load-game" onclick="if(window.app){window.app.openLoadScreen();} document.getElementById('start-screen-menu').style.display='none'; document.getElementById('start-screen-load').style.display='block'; document.getElementById('start-screen-new').style.display='none'; document.getElementById('start-screen-instructions').style.display='none';" class="btn btn-secondary btn-lg btn-block">📂 Load Saved Case</button>
+            <button id="btn-menu-instructions" onclick="document.getElementById('start-screen-menu').style.display='none'; document.getElementById('start-screen-instructions').style.display='block'; document.getElementById('start-screen-new').style.display='none'; document.getElementById('start-screen-load').style.display='none';" class="btn btn-outline btn-lg btn-block">📖 Detective Field Manual</button>
+          </div>
+          <div id="menu-save-info" class="text-muted" style="text-align: center; font-size: 0.85rem;"></div>
+        </div>
+
+        <!-- SCREEN 2: NEW CASE SETUP (Hidden by default) -->
+        <div id="start-screen-new" class="modal-body" style="display: none;">
+          <h3 style="color: var(--accent-gold); margin-bottom: 1rem;">New Case Configuration</h3>
+          <div class="form-group">
+            <label for="input-detective-name">Detective Name:</label>
+            <input type="text" id="input-detective-name" class="form-input" value="Detective Vance" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label for="select-difficulty">Case Difficulty:</label>
+            <select id="select-difficulty" class="form-select">
+              <option value="EASY">Easy (5 Suspects, 7 Days, Low Lie Rate)</option>
+              <option value="NORMAL" selected>Normal (8 Suspects, 5 Days, Standard Lie Rate)</option>
+              <option value="HARD">Hard (12 Suspects, 3 Days, High Deception)</option>
+            </select>
+          </div>
+          <div class="start-instructions" style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-sub);">
+            <p>Every new case procedurally generates a unique victim, murderer, motive, murder method, timeline matrix, physical clues, and hidden secrets.</p>
+          </div>
+          <div class="modal-footer" style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+            <button id="btn-back-to-menu-1" onclick="document.getElementById('start-screen-menu').style.display='block'; document.getElementById('start-screen-new').style.display='none';" class="btn btn-secondary">← Main Menu</button>
+            <button id="btn-start-game" onclick="if(window.app){ window.app.handleStartNewCaseClick(); } else { document.getElementById('modal-start').style.display='none'; }" class="btn btn-primary btn-block">🚀 Begin Investigation</button>
+          </div>
+        </div>
+
+        <!-- SCREEN 3: FIELD MANUAL (Hidden by default) -->
+        <div id="start-screen-instructions" class="modal-body" style="display: none;">
+          <h3 style="color: var(--accent-gold); margin-bottom: 0.75rem;">Detective Field Manual</h3>
+          <div style="font-size: 0.9rem; max-height: 280px; overflow-y: auto; padding-right: 0.5rem; color: var(--text-sub);">
+            <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">1. SEARCH LOCATIONS:</strong> Travel across 13 city venues. Sweep locations to uncover physical clues, bloodstains, fingerprints, and personal items.</p>
+            <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">2. INTERROGATE SUSPECTS:</strong> Question suspects about the victim, their alibis, and motives. Show evidence to trigger emotional reactions.</p>
+            <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">3. MONITOR PSYCHOLOGY:</strong> Suspects have dynamic Trust, Fear, Stress, and Aggression levels. Pushing too hard may cause them to clam up!</p>
+            <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">4. FORENSIC LAB:</strong> Submit evidence items at Police HQ for DNA, fingerprinting, and chemical testing.</p>
+            <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">5. CLUE DEDUCTIONS:</strong> Combine connected clues in your Inventory to unlock breakthrough deductions.</p>
+            <p style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">6. TIME & DEADLINES:</strong> Actions advance the in-game clock. Work fast before your case deadline expires!</p>
+          </div>
+          <div class="modal-footer" style="margin-top: 1.25rem;">
+            <button id="btn-back-to-menu-2" onclick="document.getElementById('start-screen-menu').style.display='block'; document.getElementById('start-screen-instructions').style.display='none';" class="btn btn-secondary btn-block">← Back to Main Menu</button>
+          </div>
+        </div>
+
+        <!-- SCREEN 4: LOAD SAVED CASE LIST (Hidden by default) -->
+        <div id="start-screen-load" class="modal-body" style="display: none;">
+          <h3 style="color: var(--accent-gold); margin-bottom: 0.75rem;">Load Saved Investigation</h3>
+          <div id="save-slots-container" style="max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+            <!-- Rendered dynamically -->
+          </div>
+          <div class="modal-footer" style="margin-top: 1.25rem;">
+            <button id="btn-back-to-menu-3" onclick="document.getElementById('start-screen-menu').style.display='block'; document.getElementById('start-screen-load').style.display='none';" class="btn btn-secondary btn-block">← Back to Main Menu</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 1: GPS CITY MAP & TRAVEL -->
+    <section id="tab-map" class="tab-pane active">
+      <div class="pane-header">
+        <h2>Metropolitan GPS Navigation Radar</h2>
+        <p>Click any city landmark pin to inspect location details and initiate travel.</p>
+      </div>
+
+      <div class="gps-map-wrapper">
+        <!-- GPS RADAR BOARD CANVAS WITH ROAD NETWORK -->
+        <div id="gps-city-board" class="gps-city-board">
+          <!-- VECTOR CITY MAP BACKGROUND WITH ROADS, RIVER, DISTRICTS & BRIDGES -->
+          <svg class="gps-map-svg" viewBox="0 0 1000 560" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="riverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#0a2540" />
+                <stop offset="100%" stop-color="#051324" />
+              </linearGradient>
+            </defs>
+
+            <!-- Waterway / River Curve -->
+            <path d="M 0 420 Q 250 350 450 380 T 750 480 Q 880 500 1000 450 L 1000 560 L 0 560 Z" fill="url(#riverGrad)" stroke="#1e3a8a" stroke-width="2"/>
+
+            <!-- Urban District Block Shadows -->
+            <rect x="280" y="40" width="220" height="140" fill="#0f172a" stroke="#1e293b" stroke-width="2" rx="6" opacity="0.75"/>
+            <rect x="700" y="100" width="240" height="280" fill="#0f172a" stroke="#1e293b" stroke-width="2" rx="6" opacity="0.75"/>
+            <rect x="60" y="120" width="200" height="260" fill="#0f172a" stroke="#1e293b" stroke-width="2" rx="6" opacity="0.75"/>
+            <rect x="340" y="240" width="280" height="180" fill="#0f172a" stroke="#1e293b" stroke-width="2" rx="6" opacity="0.75"/>
+
+            <!-- CITY ROAD NETWORK (ARTERIALS & HIGHWAYS) -->
+            <!-- Grand Avenue (East-West Boulevard) -->
+            <line x1="0" y1="280" x2="1000" y2="280" stroke="#f59e0b" stroke-width="4" opacity="0.6" stroke-dasharray="12, 6"/>
+            <!-- Metropolis Parkway (North-South Avenue) -->
+            <line x1="500" y1="0" x2="500" y2="560" stroke="#3b82f6" stroke-width="4" opacity="0.6"/>
+            <!-- Outer Ring Beltway -->
+            <path d="M 90 50 L 910 50 L 910 510 L 90 510 Z" fill="none" stroke="#64748b" stroke-width="3" opacity="0.5"/>
+            <!-- Diagonal Expressway 1 -->
+            <line x1="50" y1="510" x2="950" y2="90" stroke="#475569" stroke-width="3" opacity="0.45"/>
+            <!-- Diagonal Expressway 2 -->
+            <line x1="90" y1="90" x2="910" y2="450" stroke="#475569" stroke-width="3" opacity="0.45"/>
+
+            <!-- Secondary Cross Streets Grid -->
+            <line x1="0" y1="120" x2="1000" y2="120" stroke="#334155" stroke-width="2.5" opacity="0.5"/>
+            <line x1="0" y1="400" x2="1000" y2="400" stroke="#334155" stroke-width="2.5" opacity="0.5"/>
+            <line x1="250" y1="0" x2="250" y2="560" stroke="#334155" stroke-width="2.5" opacity="0.5"/>
+            <line x1="750" y1="0" x2="750" y2="560" stroke="#334155" stroke-width="2.5" opacity="0.5"/>
+            <line x1="380" y1="0" x2="380" y2="560" stroke="#1e293b" stroke-width="1.5" opacity="0.4"/>
+            <line x1="620" y1="0" x2="620" y2="560" stroke="#1e293b" stroke-width="1.5" opacity="0.4"/>
+            <line x1="0" y1="200" x2="1000" y2="200" stroke="#1e293b" stroke-width="1.5" opacity="0.4"/>
+            <line x1="0" y1="480" x2="1000" y2="480" stroke="#1e293b" stroke-width="1.5" opacity="0.4"/>
+
+            <!-- Bridges across River -->
+            <line x1="340" y1="360" x2="340" y2="420" stroke="#f59e0b" stroke-width="6"/>
+            <line x1="730" y1="440" x2="730" y2="500" stroke="#f59e0b" stroke-width="6"/>
+
+            <!-- District Labels -->
+            <text x="390" y="80" fill="#94a3b8" font-size="11" font-weight="700" letter-spacing="2" font-family="monospace" opacity="0.7">FINANCIAL CORE</text>
+            <text x="740" y="140" fill="#94a3b8" font-size="11" font-weight="700" letter-spacing="2" font-family="monospace" opacity="0.7">INDUSTRIAL DOCKS</text>
+            <text x="80" y="150" fill="#94a3b8" font-size="11" font-weight="700" letter-spacing="2" font-family="monospace" opacity="0.7">RESIDENTIAL QUARTER</text>
+            <text x="400" y="320" fill="#94a3b8" font-size="11" font-weight="700" letter-spacing="2" font-family="monospace" opacity="0.7">COMMERCIAL PLAZA</text>
+            <text x="450" y="535" fill="#3b82f6" font-size="11" font-weight="700" letter-spacing="3" font-family="monospace" opacity="0.8">METROPOLIS HARBOR</text>
+          </svg>
+
+          <div class="gps-radar-sweep"></div>
+          <div class="gps-watermark">METROPOLIS POLICE DEPT // ROAD NETWORK GPS</div>
+          <!-- Pins rendered dynamically -->
+        </div>
+
+        <!-- POPUP INSPECTOR MODAL FOR SELECTED LANDMARK -->
+        <div id="gps-location-popup" class="gps-popup-card hidden">
+          <div class="gps-popup-header">
+            <div id="gps-popup-icon" class="gps-popup-icon">🚨</div>
+            <div style="flex-grow: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="gps-popup-title" style="margin: 0; color: var(--accent-gold);">Location Title</h3>
+                <span id="gps-popup-badge" class="location-badge-open">OPEN</span>
+              </div>
+              <div id="gps-popup-category" class="text-sub" style="font-size: 0.75rem;">Category</div>
+            </div>
+            <button id="gps-popup-close" class="btn-close-sm" style="background: none; border: none; color: var(--text-sub); font-size: 1.2rem; cursor: pointer;">✕</button>
+          </div>
+
+          <p id="gps-popup-desc" class="text-sub mt-2" style="font-size: 0.85rem;">Location description text.</p>
+
+          <div class="gps-popup-stats mt-2">
+            <div><strong>⏱️ Travel Duration:</strong> <span id="gps-popup-travel" class="text-gold">15 mins</span></div>
+            <div><strong>👥 Occupants Present:</strong> <span id="gps-popup-occupants-count">0 person(s)</span></div>
+          </div>
+
+          <div id="gps-popup-occupants-list" class="mt-2 text-main" style="font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: var(--radius-sm);"></div>
+
+          <div class="mt-3">
+            <button id="btn-gps-travel" class="btn btn-primary btn-block">🚀 Travel Here</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SEARCH SCENE -->
+    <section id="tab-search" class="tab-pane">
+      <div class="pane-header">
+        <h2 id="search-location-title">Location Sweep & Crime Scene</h2>
+        <p id="search-location-sub">Conduct physical forensic sweeps to uncover hidden evidence items.</p>
+      </div>
+      <div class="search-dashboard">
+        <div class="card search-card">
+          <div id="search-weather-badge" class="weather-badge">Weather: Clear</div>
+          <div class="search-progress-wrapper">
+            <label>Search Thoroughness:</label>
+            <div class="progress-bar-container">
+              <div id="search-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <span id="search-progress-text" class="progress-label">0% Searched</span>
+          </div>
+          <div id="search-description" class="search-desc-box">
+            Select "Sweep Location" to begin inspecting for physical evidence.
+          </div>
+          <div class="card-actions">
+            <button id="btn-do-search" class="btn btn-primary btn-lg">🔍 Sweep Location (1 Hour)</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Uncovered Physical Evidence</h3>
+          <div id="search-results-list" class="evidence-mini-list">
+            <p class="text-muted">No evidence discovered during current sweep session yet.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: INTERROGATION ROOM -->
+    <section id="tab-interrogate" class="tab-pane">
+      <div class="pane-header">
+        <h2>Interrogation Suite</h2>
+        <p>Question suspects, present physical evidence, and monitor dynamic psychological reactions.</p>
+      </div>
+      <div class="interrogation-layout">
+        <!-- SUSPECT SELECTOR SIDEBAR -->
+        <aside class="interrogation-sidebar card">
+          <h3>Suspects at Location</h3>
+          <div id="interrogation-suspect-list" class="suspect-selector-list"></div>
+        </aside>
+
+        <!-- ACTIVE INTERROGATION PANEL -->
+        <div class="interrogation-main card">
+          <div id="interrogation-active-view" class="hidden">
+            <div class="suspect-header-block">
+              <div class="suspect-avatar" id="suspect-avatar">👤</div>
+              <div>
+                <h3 id="interrogate-name">Suspect Name</h3>
+                <p id="interrogate-details" class="text-sub">Occupation | Relation</p>
+                <div id="interrogate-posture" class="badge-posture">Guarded</div>
+              </div>
+            </div>
+
+            <!-- PSYCHOLOGICAL STAT METERS -->
+            <div class="psych-meters">
+              <div class="meter-box">
+                <span>Trust</span>
+                <div class="progress-bar-container"><div id="meter-trust" class="progress-bar-fill bg-blue" style="width: 50%;"></div></div>
+                <span id="val-trust">50/100</span>
+              </div>
+              <div class="meter-box">
+                <span>Fear</span>
+                <div class="progress-bar-container"><div id="meter-fear" class="progress-bar-fill bg-purple" style="width: 30%;"></div></div>
+                <span id="val-fear">30/100</span>
+              </div>
+              <div class="meter-box">
+                <span>Stress</span>
+                <div class="progress-bar-container"><div id="meter-stress" class="progress-bar-fill bg-amber" style="width: 50%;"></div></div>
+                <span id="val-stress">50/100</span>
+              </div>
+              <div class="meter-box">
+                <span>Aggression</span>
+                <div class="progress-bar-container"><div id="meter-aggression" class="progress-bar-fill bg-red" style="width: 20%;"></div></div>
+                <span id="val-aggression">20/100</span>
+              </div>
+            </div>
+
+            <!-- SPEECH DIALOGUE LOG -->
+            <div id="dialogue-box" class="dialogue-box">
+              <p class="dialogue-line System">Select a topic below to begin questioning.</p>
+            </div>
+
+            <!-- INTERROGATION ACTIONS -->
+            <div class="interrogation-controls">
+              <button id="btn-ask-victim" class="btn btn-secondary">Ask about Victim</button>
+              <button id="btn-ask-alibi" class="btn btn-secondary">Ask about Alibi</button>
+              <button id="btn-ask-motive" class="btn btn-secondary">Ask about Motive</button>
+              <button id="btn-show-evidence" class="btn btn-secondary">Present Evidence</button>
+              <button id="btn-tone-polite" class="btn btn-outline">Tone: Polite</button>
+              <button id="btn-tone-pressure" class="btn btn-outline">Tone: Pressure</button>
+              <button id="btn-tone-threaten" class="btn btn-outline-danger">Tone: Threaten</button>
+            </div>
+          </div>
+          <div id="interrogation-placeholder" class="placeholder-box">
+            <p>Select a suspect from the list to begin questioning.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: FORENSIC LAB -->
+    <section id="tab-lab" class="tab-pane">
+      <div class="pane-header">
+        <h2>Metropolitan Forensic Laboratory</h2>
+        <p>Submit evidence for DNA matching, fingerprint identification, and chemical analysis.</p>
+      </div>
+      <div class="lab-layout grid-2">
+        <div class="card">
+          <h3>Submit Evidence to Lab</h3>
+          <div id="lab-submission-list" class="evidence-sub-list"></div>
+        </div>
+        <div class="card">
+          <h3>Active Forensic Analysis Queue</h3>
+          <div id="lab-queue-list" class="lab-queue-container">
+            <p class="text-muted">No items currently processing in forensic lab.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: CLUE DEDUCTION MATRIX -->
+    <section id="tab-deductions" class="tab-pane">
+      <div class="pane-header">
+        <h2>Clue Deduction Matrix</h2>
+        <p>Select multiple related evidence items from inventory to attempt a breakthrough deduction.</p>
+      </div>
+      <div class="deduction-layout grid-2">
+        <div class="card">
+          <h3>Collected Evidence Items</h3>
+          <div id="deduction-evidence-selector" class="evidence-selectable-list"></div>
+          <button id="btn-attempt-deduction" class="btn btn-primary btn-block mt-3">🧩 Connect Selected Clues</button>
+        </div>
+        <div class="card">
+          <h3>Unlocked Detective Breakthroughs</h3>
+          <div id="unlocked-deductions-list" class="deductions-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: DETECTIVE NOTEBOOK -->
+    <section id="tab-notebook" class="tab-pane">
+      <div class="pane-header">
+        <h2>Detective Notebook & Dossiers</h2>
+        <p>Review automatic investigation entries, victim profile, and suspect dossiers.</p>
+      </div>
+      <div class="notebook-tabs">
+        <button class="sub-tab active" data-subtab="nb-logs">Notebook Logs</button>
+        <button class="sub-tab" data-subtab="nb-victim">Victim & Autopsy</button>
+        <button class="sub-tab" data-subtab="nb-suspects">Suspect Dossiers</button>
+      </div>
+      <div class="card mt-3">
+        <div id="nb-logs" class="subtab-pane active">
+          <div id="notebook-entries-list" class="notebook-entries"></div>
+        </div>
+        <div id="nb-victim" class="subtab-pane">
+          <div id="victim-dossier-content"></div>
+        </div>
+        <div id="nb-suspects" class="subtab-pane">
+          <div id="suspects-dossiers-content"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: DAILY PRESS NEWSPAPER -->
+    <section id="tab-newspaper" class="tab-pane">
+      <div class="pane-header">
+        <h2>City Morning Gazette</h2>
+        <p>Read daily breaking headlines, weather reports, and city updates.</p>
+      </div>
+      <div class="card newspaper-card">
+        <div id="newspaper-container" class="newspaper-box"></div>
+      </div>
+    </section>
+
+    <!-- TAB 8: ARREST WARRANT / ACCUSE -->
+    <section id="tab-accuse" class="tab-pane">
+      <div class="pane-header text-crimson">
+        <h2>File Formal Arrest Warrant</h2>
+        <p>Present probable cause and issue an official indictment warrant. Choose wisely!</p>
+      </div>
+      <div class="card border-crimson">
+        <h3>Indictment Target Selection</h3>
+        <p class="text-sub">Filing an arrest warrant concludes the active case investigation.</p>
+        <div id="accuse-suspect-list" class="suspect-accuse-grid"></div>
+        <div class="card-actions mt-4">
+          <button id="btn-confirm-accuse" class="btn btn-danger btn-lg btn-block" disabled>⚖️ Issue Arrest Warrant for Selected Suspect</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: ENDING GAME VERDICT -->
+  <div id="modal-ending" class="modal-backdrop hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <h2 id="ending-title">CASE RESOLUTION VERDICT</h2>
+      </div>
+      <div class="modal-body">
+        <div class="ending-grade-badge" id="ending-grade-badge">GRADE S</div>
+        <div id="ending-narrative" class="ending-box"></div>
+        <div id="ending-stats" class="ending-stats-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-restart-game" class="btn btn-primary">✨ Play Another Case</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PRESENT EVIDENCE SELECTOR (DURING INTERROGATION) -->
+  <div id="modal-evidence-picker" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Select Evidence to Present</h2>
+      </div>
+      <div class="modal-body">
+        <div id="evidence-picker-list" class="evidence-selectable-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-picker" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT MODULES -->
+  <script type="module" src="src/app.js?v=3"></script>
+</body>
+</html>
